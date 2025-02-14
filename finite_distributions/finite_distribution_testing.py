@@ -1,6 +1,6 @@
 from FiniteDistribution import FiniteDistribution
-from ..core.require import require
-from itertools import powerset
+from core.require import require, requireApproxEq
+import numpy as np
 
 
 def test_init():
@@ -32,11 +32,11 @@ def test_probability_query():
     for key in distribution_keys:
         require(distribution.get_probability(key) == distribution_keys[key])
     
-    require(distribution.get_event_probability(lambda k: key is "a" or key is "b") == 1.0)
-    require(distribution.get_event_probability(lambda k: key is "a" or key is "c") == 0.1)
-    require(distribution.get_event_probability(lambda k: key is "b" or key is "c") == 0.9)
-    require(distribution.get_event_probability(lambda k: True) == 1.0)
-    require(distribution.get_event_probability(lambda k: False) == 0.0)
+    requireApproxEq(distribution.get_event_probability(lambda key: key == "a" or key == "b"), 1.0)
+    requireApproxEq(distribution.get_event_probability(lambda key: key == "a" or key == "c"), 0.1)
+    requireApproxEq(distribution.get_event_probability(lambda key: key == "b" or key == "c"), 0.9)
+    requireApproxEq(distribution.get_event_probability(lambda key: True), 1.0)
+    requireApproxEq(distribution.get_event_probability(lambda key: False), 0.0)
 
 def run_all_tests():
     test_init()
@@ -46,7 +46,7 @@ def run_all_tests():
 if __name__ == "__main__":
     run_all_tests()
 
-    distribution_keys = {"a": 0.1, "b": 0.3, "c": 0.0, "d": 0.3, "e": 0.2, "f": 0.5, "g": 0.5}
+    distribution_keys = {"a": 0.1, "b": 0.3, "c": 0.0, "d": 0.3, "e": 0.2, "f": 0.05, "g": 0.05}
     distribution = FiniteDistribution(distribution_keys)
     distribution.generateBarChart()
 
