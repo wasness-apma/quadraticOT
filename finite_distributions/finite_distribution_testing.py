@@ -38,6 +38,17 @@ def test_probability_query():
     requireApproxEq(distribution.get_event_probability(lambda key: True), 1.0)
     requireApproxEq(distribution.get_event_probability(lambda key: False), 0.0)
 
+def test_product():
+    distribution_a = FiniteDistribution({"a": 0.1, "b": 0.9, "c": 0.0})
+    distribution_b = FiniteDistribution({"c": 0.1, "d": 0.9, "e": 0.0, "f": 0.0})
+    product = distribution_a.productDistribution(distribution_b)
+
+    require(len(product.elemetMapping) == len(distribution_a.elementMapping) * len(distribution_b.elementMapping))
+    for key1 in distribution_a.elementMapping:
+        for key2 in distribution_a.elementMapping:
+            require(np.abs(product.get_probability((key1, key2)) - distribution_a.get_probability(key1) * distribution_b.get_probability(key2)) < 0.0001)
+
+
 def run_all_tests():
     test_init()
     test_probability_query()

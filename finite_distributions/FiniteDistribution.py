@@ -37,3 +37,7 @@ class FiniteDistribution:
         plt.title("Bar Chart.")
         plt.show()
 
+    # Any == FiniteDistribution. Self-Typing is awkward in python.
+    def productDistribution(self, other: Any, totalProbabilityErrorAllowance: Optional[float] = None) -> Any:
+        elementMapping = {(key1, key2): self.get_probability(key1) * other.get_probability(key2) for key1 in self.elementMapping.keys() for key2 in other.elementMapping.keys()}
+        return FiniteDistribution(elementMapping, totalProbabilityErrorAllowance = totalProbabilityErrorAllowance)
