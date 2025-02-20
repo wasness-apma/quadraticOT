@@ -13,16 +13,15 @@ class FiniteDistribution:
         self.elemList = sorted(list(elementMapping.keys())) # sort by whatever sort makes sense
         self.probabilityList = [elementMapping[key] for key in self.elemList]
 
-
         errorTerm = totalProbabilityErrorAllowance if totalProbabilityErrorAllowance is not None else self.defaultErrorEpsilon
         totSum = 0
         for probability in self.probabilityList:
             require(-errorTerm <= probability and probability <= 1 + errorTerm)
             totSum += probability
-        require (np.abs(totSum - 1) < errorTerm)
+        require (np.abs(totSum - 1) < errorTerm, throwMessage = f"Faulty totSum={totSum} for error tolerance errorTerm={errorTerm}")
 
     def get_probability(self, key: Any):
-        require(key in self.elementMapping)
+        require(key in self.elementMapping, f"Found invalid key {key}. Valid keys: f{list(self.elementMapping.keys())}")
         return self.elementMapping[key]
 
     def get_event_probability(self, indicator: Callable[[Any], bool]):
