@@ -4,8 +4,7 @@ import pandas as pd
 import seaborn as sns
 import matplotlib.pyplot as plt
 
-def visualize_joint_probability(joint_probability: FiniteDistribution, **kwargs):
-
+def visualize_joint_probability(joint_probability: FiniteDistribution, title = None, **kwargs):
     all_keys = joint_probability.elementMapping.keys()
     keys1 = sorted(list(set([tup[0] for tup in all_keys])))
     keys2 = sorted(list(set([tup[1] for tup in all_keys])))
@@ -18,5 +17,7 @@ def visualize_joint_probability(joint_probability: FiniteDistribution, **kwargs)
     plt.figure()
     sns.heatmap(df, **kwargs)
     plt.xlabel("key2")
+    if title is not None:
+        plt.title(title)
     plt.show()
 
