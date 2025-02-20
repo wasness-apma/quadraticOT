@@ -1,4 +1,4 @@
-from typing import Dict, Any, Callable
+from typing import Dict, Any, Callable, Set, Optional
 from core.require import require
 import matplotlib.pyplot as plt
 import numpy as np
@@ -6,16 +6,20 @@ import numpy as np
 # this is done generically so that we can encode any sort of key on it
 class FiniteDistribution:
 
-    def __init__(self, elementMapping: Dict[Any, float]):
+    defaultErrorEpsilon: float = 0.000001
+
+    def __init__(self, elementMapping: Dict[Any, float], totalProbabilityErrorAllowance: Optional[float] = None):
         self.elementMapping = elementMapping
         self.elemList = sorted(list(elementMapping.keys())) # sort by whatever sort makes sense
         self.probabilityList = [elementMapping[key] for key in self.elemList]
 
+
+        errorTerm = totalProbabilityErrorAllowance if totalProbabilityErrorAllowance is not None else self.defaultErrorEpsilon
         totSum = 0
         for probability in self.probabilityList:
-            require(0 <= probability and probability <= 1)
+            require(-errorTerm <= probability and probability <= 1 + errorTerm)
             totSum += probability
-        require (totSum <= 1)
+        require (np.abs(totSum - 1) < errorTerm)
 
     def get_probability(self, key: Any):
         require(key in self.elementMapping)
@@ -23,6 +27,9 @@ class FiniteDistribution:
 
     def get_event_probability(self, indicator: Callable[[Any], bool]):
         return np.sum([self.elementMapping[key] for key in self.elementMapping if indicator(key)])
+
+    def get_keys(self) -> Set[Any]:
+        return set(self.elemList)
 
     def generateBarChart(self):
         plt.figure()

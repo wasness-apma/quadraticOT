@@ -1,4 +1,4 @@
-from FiniteDistribution import FiniteDistribution
+from finite_distributions.FiniteDistribution import FiniteDistribution
 from core.require import require, requireApproxEq
 import numpy as np
 
