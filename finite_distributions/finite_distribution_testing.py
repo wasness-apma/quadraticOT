@@ -49,10 +49,24 @@ def test_product():
             require(np.abs(product.get_probability((key1, key2)) - distribution_a.get_probability(key1) * distribution_b.get_probability(key2)) < 0.0001)
 
 
+def test_product_flip():
+    distribution = FiniteDistribution({("a", "b"): 0.3, ("c", "d"): 0.7})
+    flipped = distribution.flip_product_distribution_order()
+    require(flipped.get_keys() == {("b", "a"), ("d", "c")})
+
+def test_conditional_map():
+    distribution = FiniteDistribution({(0, 0): 0.5, (1, 1): 0.3, (0, 1): 0.15, (1, 0): 0.05})
+    conditional = distribution.calculate_conditional_map()
+    requireApproxEq(conditional[0], 0.15 / (0.5 + 0.15))
+    requireApproxEq(conditional[1], 0.3 / (0.05 + 0.3))
+
+
 def run_all_tests():
     test_init()
     test_probability_query()
-    print("Ran all Tests for FiniteDistributionTesting")
+    test_product_flip()
+    test_conditional_map()
+    print("Ran all Tests for FiniteDistributionTesting: init, query, product, flip, conditonal map")
 
 if __name__ == "__main__":
     run_all_tests()
@@ -60,6 +74,8 @@ if __name__ == "__main__":
     distribution_keys = {"a": 0.1, "b": 0.3, "c": 0.0, "d": 0.3, "e": 0.2, "f": 0.05, "g": 0.05}
     distribution = FiniteDistribution(distribution_keys)
     distribution.generateBarChart()
+
+
 
 
     

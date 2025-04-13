@@ -46,3 +46,17 @@ class FiniteDistribution:
         for element in self.elementMapping:
             sum += functional(element) * self.get_probability(element)
         return sum
+    
+    # Any == FiniteDistribution. Self-Typing is awkward in python.
+    def flip_product_distribution_order(self, totalProbabilityErrorAllowance = None) -> Any:
+        new_element_mapping = {(y, x): self.elementMapping[(x, y)] for (x, y) in self.elementMapping}
+        return FiniteDistribution(new_element_mapping, totalProbabilityErrorAllowance = totalProbabilityErrorAllowance)
+
+    # if product distribution, calculate the conditional map, assuming RHS is a float
+    def calculate_conditional_map(self) -> Dict[Any, float]:
+        xs = list(set([x for (x, y) in self.elementMapping]))
+        ys = list(set([y for (x, y) in self.elementMapping]))
+        conditionalMap = {
+            x : np.sum([y * self.elementMapping.get((x, y), 0.0)for y in ys]) / np.sum([self.elementMapping.get((x, y), 0.0)for y in ys]) for x in xs
+        }
+        return conditionalMap   
