@@ -1,4 +1,5 @@
 from sinkhorn.SinkhornRunner import SinkhornRunner
+from sinkhorn.SinkhornRunnerQuadratic import SinkhornRunnerQuadratic
 from typing import Callable, Any
 import numpy as np
 from core.require import require
@@ -16,3 +17,6 @@ def get_pnorm_regularized_runner(p: float, cost: Callable[[Any, Any], float]) ->
     PsiPrime = lambda y: (0 if y <= 0 else np.power(y, 1 / (p - 1)))
 
     return SinkhornRunner(cost, Phi, PsiPrime)
+
+def get_quadratically_regularized_runner(cost: Callable[[Any, Any], float]) -> SinkhornRunner:
+    return SinkhornRunnerQuadratic(cost)
