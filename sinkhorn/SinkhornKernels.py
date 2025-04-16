@@ -18,5 +18,5 @@ def get_pnorm_regularized_runner(p: float, cost: Callable[[Any, Any], float]) ->
 
     return SinkhornRunner(cost, Phi, PsiPrime)
 
-def get_quadratically_regularized_runner(cost: Callable[[Any, Any], float]) -> SinkhornRunner:
-    return SinkhornRunnerQuadratic(cost)
+def get_quadratically_regularized_runner(cost: Callable[[Any, Any], float], use_parallelization: bool) -> SinkhornRunner:
+    return SinkhornRunnerQuadratic(cost, use_parallelization = use_parallelization)

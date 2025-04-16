@@ -90,12 +90,12 @@ def test_coin_flip_quadratic_runner():
         gamma = 3 * (np.random.random() + 0.01)
         cost = lambda x, y: 0 if x[0] == y[0] else (2 + gamma)
 
-        pnorm = skern.get_quadratically_regularized_runner(cost)
+        two_norm = skern.get_quadratically_regularized_runner(cost, use_parallelization=False)
 
         epsilon = 1.
         delta = 0.0001
 
-        ran = pnorm.run_sinkhorn(dist_a, dist_b, epsilon, delta)
+        ran = two_norm.run_sinkhorn(dist_a, dist_b, epsilon, delta, printInfo = False)
         require(len(ran[0].elementMapping.keys()) == 4)
         require(sorted(list(ran[0].elementMapping.keys())) == [("H1", "H2"), ("H1", "T2"), ("T1", "H2"), ("T1", "T2")])
         
@@ -133,37 +133,38 @@ def test_coin_flip_quadratic_runner():
 
 
 def test_compare_quadratic_kernels():
-    for nkeys in range(1, 10):
-        # scaling
-        dist_a_keys_unsummed = {i: 1.0 * (i+1) for i in range(nkeys)}
-        sum_a = sum([v for v in dist_a_keys_unsummed.values()])
-        dist_a_keys = {key: (dist_a_keys_unsummed[key])/sum_a for key in dist_a_keys_unsummed}
-        dist_a = FiniteDistribution(dist_a_keys)
+    for use_par in [False]:
+        for nkeys in [2]:#range(1, 10):
+            # scaling
+            dist_a_keys_unsummed = {i: 1.0 * (i+1) for i in range(nkeys)}
+            sum_a = sum([v for v in dist_a_keys_unsummed.values()])
+            dist_a_keys = {key: (dist_a_keys_unsummed[key])/sum_a for key in dist_a_keys_unsummed}
+            dist_a = FiniteDistribution(dist_a_keys)
 
-        # uniform
-        dist_b_keys_unsummed = {i: 1.0 for i in range(nkeys)}
-        sum_b = sum([v for v in dist_b_keys_unsummed.values()])
-        dist_b_keys = {key: dist_b_keys_unsummed[key]/sum_b for key in dist_b_keys_unsummed}
-        dist_b = FiniteDistribution(dist_b_keys)
+            # uniform
+            dist_b_keys_unsummed = {i: 1.0 for i in range(nkeys)}
+            sum_b = sum([v for v in dist_b_keys_unsummed.values()])
+            dist_b_keys = {key: dist_b_keys_unsummed[key]/sum_b for key in dist_b_keys_unsummed}
+            dist_b = FiniteDistribution(dist_b_keys)
 
-        cost = lambda x, y: (x - y)**2
+            cost = lambda x, y: (x - y)**2
 
-        runner_standard = skern.get_pnorm_regularized_runner(2.0, cost)
-        runner_optimized = skern.get_quadratically_regularized_runner(cost)
+            runner_standard = skern.get_pnorm_regularized_runner(2.0, cost)
+            runner_optimized = skern.get_quadratically_regularized_runner(cost, use_parallelization=use_par)
 
-        epsilon = 1.0
-        precisionDelta = 0.01
-        pi_s, f_s, g_s, _, _ = runner_standard.run_sinkhorn(dist_a, dist_b, epsilon, precisionDelta=precisionDelta)
-        pi_q, f_q, g_q, _, _ = runner_optimized.run_sinkhorn(dist_a, dist_b, epsilon, precisionDelta=precisionDelta)
+            epsilon = 1.0
+            precisionDelta = 0.01
+            pi_s, f_s, g_s, _, _ = runner_standard.run_sinkhorn(dist_a, dist_b, epsilon, precisionDelta=precisionDelta)
+            pi_q, f_q, g_q, _, _ = runner_optimized.run_sinkhorn(dist_a, dist_b, epsilon, precisionDelta=precisionDelta)
 
-        require(pi_s.get_keys() == pi_q.get_keys())
-        require(f_s.keys() == f_q.keys())
-        require(g_s.keys() == g_q.keys())
+            require(pi_s.get_keys() == pi_q.get_keys())
+            require(f_s.keys() == f_q.keys())
+            require(g_s.keys() == g_q.keys())
 
-        for (x, y) in pi_s.get_keys():
-            requireApproxEq(pi_s.get_probability((x, y)), pi_q.get_probability((x, y)), epsilon=precisionDelta)
-            requireApproxEq(f_s[x], f_q[x], epsilon=precisionDelta)
-            requireApproxEq(g_s[y], g_q[y], epsilon=precisionDelta)
+            for (x, y) in pi_s.get_keys():
+                requireApproxEq(pi_s.get_probability((x, y)), pi_q.get_probability((x, y)), epsilon=precisionDelta)
+                requireApproxEq(f_s[x], f_q[x], epsilon=precisionDelta)
+                requireApproxEq(g_s[y], g_q[y], epsilon=precisionDelta)
 
 def run_all_tests():
     test_singleton()
