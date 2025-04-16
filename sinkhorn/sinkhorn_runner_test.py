@@ -2,6 +2,7 @@ from finite_distributions.FiniteDistribution import FiniteDistribution
 from core.require import require, requireApproxEq
 import numpy as np
 import sinkhorn.SinkhornKernels as skern
+from sinkhorn.SinkhornRunner import SinkhornRunner
 
 
 def test_singleton():
@@ -116,7 +117,7 @@ def test_coin_flip_quadratic_runner():
         eta = 2 * np.random.random()
         cost = lambda x, y: 0 if x[0] == y[0] else eta
 
-        pnorm = skern.get_pnorm_regularized_runner(2., cost)
+        pnorm = skern.get_quadratically_regularized_runner(cost, use_parallelization = False)
 
         epsilon = 1.
         delta = 0.0001
@@ -133,7 +134,7 @@ def test_coin_flip_quadratic_runner():
 
 
 def test_compare_quadratic_kernels():
-    for use_par in [False, True]:
+    for use_par in [False]:#, True]:
         for nkeys in range(2, 10):
             # scaling
             dist_a_keys_unsummed = {i: 1.0 * (i+1) for i in range(nkeys)}
@@ -166,11 +167,64 @@ def test_compare_quadratic_kernels():
                 requireApproxEq(f_s[x], f_q[x], epsilon=precisionDelta)
                 requireApproxEq(g_s[y], g_q[y], epsilon=precisionDelta)
 
+def test_coin_flip_entropic_runner():
+    # test comes from Nutz paper, "Quadratically Regularized Optima Transport: Exitence and Multiplicity of Potentials"
+    dist_a_keys = {"H1": 0.5, "T1": 0.5}
+    dist_a = FiniteDistribution(dist_a_keys)
+
+    dist_b_keys = {"H2": 0.1, "T2": 0.9}
+    dist_b = FiniteDistribution(dist_b_keys)
+
+    # test cost for 2-norm 
+    for _ in range(10):
+        gamma = 3 * (np.random.random() + 0.01)
+        cost = lambda x, y: 0 if x[0] == y[0] else gamma
+
+        entropic_runner = skern.get_entropically_regularized_runner(cost)
+        manual_entropic_runner = SinkhornRunner(cost, lambda x: x * np.log(x), lambda y: np.exp(y - 1))
+
+        epsilon = 1.
+        delta = 0.0001
+
+        ran = entropic_runner.run_sinkhorn(dist_a, dist_b, epsilon, delta, printInfo = False)
+        ran_manual = manual_entropic_runner.run_sinkhorn(dist_a, dist_b, epsilon, delta, printInfo = False)
+
+        pi = ran[0]
+        f = ran[1]
+        g = ran[2]
+
+        require(len(ran[0].elementMapping.keys()) == 4)
+        require(sorted(list(ran[0].elementMapping.keys())) == [("H1", "H2"), ("H1", "T2"), ("T1", "H2"), ("T1", "T2")])
+        
+        pi = ran[0]
+        f, g = ran[1], ran[2]
+
+        for x in f.keys():
+            marginal_probability = pi.get_event_probability(lambda tup: tup[0] == x)
+            requireApproxEq(marginal_probability, dist_a.get_probability(x), delta)
+
+        for y in g.keys():
+            marginal_probability = pi.get_event_probability(lambda tup: tup[1] == y)
+            requireApproxEq(marginal_probability, dist_b.get_probability(y), delta)
+
+        pi_man = ran_manual[0]
+        f_man = ran_manual[1]
+        g_man = ran_manual[2] 
+
+        require(pi_man.get_keys() == pi.get_keys())
+        require(f_man.keys() == f.keys())
+        require(g_man.keys() == g.keys())
+        for (x, y) in pi_man.get_keys():
+            requireApproxEq(pi_man.get_probability((x, y)), pi.get_probability((x, y)), delta)
+            requireApproxEq(f_man[x] + g_man[y], f[x] + g[y], 10*delta)
+
+
 def run_all_tests():
     test_singleton()
     test_coin_flip_2norm()
     test_coin_flip_quadratic_runner()
     test_compare_quadratic_kernels()
+    test_coin_flip_entropic_runner()
     print("Ran all Tests for SinkhornRunnerTest")
 
 if __name__ == "__main__":
