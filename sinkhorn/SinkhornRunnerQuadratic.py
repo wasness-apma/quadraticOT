@@ -4,6 +4,7 @@ from core.require import require
 from sinkhorn.SinkhornRunner import SinkhornRunner
 import numpy as np
 from concurrent.futures import ProcessPoolExecutor
+from functools import partial
 
 
 # A generic module for running sinkhorn algorithms and outputting duals on finite spaces. 
@@ -95,51 +96,44 @@ class SinkhornRunnerQuadratic(SinkhornRunner):
 
         return (returnDistribution, f_remappped, g_remappped, total_search_iterations, outer_iterations)
 
+    @staticmethod
+    def calculateDesiredPrimal(costArray: np.array, probabilityArray: np.array, epsilon: float):
+        # first sort the Array
+        arraySorting = costArray.argsort()
+        sorted_arr = costArray[arraySorting]
+        sorted_probabilities = probabilityArray[arraySorting]
 
+        sumSoFar = 0.0 # sum so far
+        derivativeSoFar = 0.0 # derivative of the previous segment
+        newDerivative = 0.0 # initialize in case of triviality
+
+        i = 0
+        while i < len(sorted_arr) - 1:
+            curX = sorted_arr[i]
+            nextX = sorted_arr[i+1]
+
+            newDerivative = derivativeSoFar + sorted_probabilities[i]  # probability associated with primal key
+            nextSum = sumSoFar + newDerivative * (nextX - curX)
+
+            if nextSum > epsilon:
+                break
+
+            sumSoFar = nextSum
+            derivativeSoFar = newDerivative
+            i += 1
+
+        if i == len(sorted_arr) - 1:
+            #  need to update in case of edge conditions
+            curX = sorted_arr[i]
+            newDerivative += sorted_probabilities[i]
+
+        x = (epsilon - sumSoFar) / newDerivative + curX
+        return x, i
 
     @override
     def calculate_dual_potential_quadratic(self, rho: np.array, potential: np.array, dualKeys: list, costMatrix: np.array, epsilon: float, printInfo: bool = False) -> Tuple[Dict[Any, float], float]:
-        if printInfo:
-            print("Developing negative potential mapping.")
-            
         # these are the negatives of f(x) - c(x, y).
         negativePotentialMinusCostMappings = -(potential - costMatrix)
-
-        if printInfo:
-            print("Developed negative potential mapping.")
-
-        def calculateDesiredPrimal(costArray: np.array, probabilityArray: np.array):
-            # first sort the Array
-            arraySorting = costArray.argsort()
-            sorted_arr = costArray[arraySorting]
-            sorted_probabilities = probabilityArray[arraySorting]
-
-            sumSoFar = 0.0 # sum so far
-            derivativeSoFar = 0.0 # derivative of the previous segment
-            newDerivative = 0.0 # initialize in case of triviality
-
-            i = 0
-            while i < len(sorted_arr) - 1:
-                curX = sorted_arr[i]
-                nextX = sorted_arr[i+1]
-
-                newDerivative = derivativeSoFar + sorted_probabilities[i]  # probability associated with primal key
-                nextSum = sumSoFar + newDerivative * (nextX - curX)
-
-                if nextSum > epsilon:
-                    break
-
-                sumSoFar = nextSum
-                derivativeSoFar = newDerivative
-                i += 1
-
-            if i == len(sorted_arr) - 1:
-                #  need to update in case of edge conditions
-                curX = sorted_arr[i]
-                newDerivative += sorted_probabilities[i]
-
-            x = (epsilon - sumSoFar) / newDerivative + curX
-            return x, i
         
         innerIterations = 0
 
@@ -147,16 +141,15 @@ class SinkhornRunnerQuadratic(SinkhornRunner):
             outputs = []
             for i in range(len(dualKeys)):
                 dualKey = dualKeys[i]
-                print(f"Running for dual key {dualKey}")
-                newValue, newIters = calculateDesiredPrimal(negativePotentialMinusCostMappings[i], rho)
+                newValue, newIters = self.calculateDesiredPrimal(negativePotentialMinusCostMappings[i], rho, epsilon)
                 outputs.append(newValue)
                 innerIterations += newIters
-                print(f"Done for dual key {dualKey}. Inner Iterations total: {innerIterations}")
         else:
+            partialFuncPrimal = partial(self.calculateDesiredPrimal, probabilityArray=rho, epsilon=epsilon)
             with ProcessPoolExecutor() as executor:
-                batches = [negativePotentialMinusCostMappings[dualKey] for dualKey in dualKeys]
-                results = list(executor.map(calculateDesiredPrimal, batches))
-                outputs = [results[i][0] for i in range(len(batches))]
+                batches = [negativePotentialMinusCostMappings[i] for i in range(len(dualKeys))]
+                results = list(executor.map(partialFuncPrimal, batches))
+                outputs = np.array([results[i][0] for i in range(len(batches))])
                 innerIterations += sum([res[1] for res in batches])
 
         return np.array(outputs), innerIterations

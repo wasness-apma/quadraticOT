@@ -133,8 +133,8 @@ def test_coin_flip_quadratic_runner():
 
 
 def test_compare_quadratic_kernels():
-    for use_par in [False]:
-        for nkeys in [2]:#range(1, 10):
+    for use_par in [False, True]:
+        for nkeys in range(2, 10):
             # scaling
             dist_a_keys_unsummed = {i: 1.0 * (i+1) for i in range(nkeys)}
             sum_a = sum([v for v in dist_a_keys_unsummed.values()])
@@ -155,7 +155,7 @@ def test_compare_quadratic_kernels():
             epsilon = 1.0
             precisionDelta = 0.01
             pi_s, f_s, g_s, _, _ = runner_standard.run_sinkhorn(dist_a, dist_b, epsilon, precisionDelta=precisionDelta)
-            pi_q, f_q, g_q, _, _ = runner_optimized.run_sinkhorn(dist_a, dist_b, epsilon, precisionDelta=precisionDelta)
+            pi_q, f_q, g_q, _, _ = runner_optimized.run_sinkhorn(dist_a, dist_b, epsilon, precisionDelta=precisionDelta, printInfo=False)
 
             require(pi_s.get_keys() == pi_q.get_keys())
             require(f_s.keys() == f_q.keys())
