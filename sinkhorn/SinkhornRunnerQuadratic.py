@@ -23,39 +23,47 @@ class SinkhornRunnerQuadratic(SinkhornRunner):
         
         # these are the negatives of f(x) - c(x, y).
         negativePotentialMinusCostMappings = {
-            dualKey: np.array([[-(potential[primalKey] - orderedCost(primalKey, dualKey))   , rho.get_probability(primalKey)] for primalKey in primalKeys]) for dualKey in dualKeys
+            dualKey: np.array([[-(potential[primalKey] - orderedCost(primalKey, dualKey)) , rho.get_probability(primalKey)] for primalKey in primalKeys]) for dualKey in dualKeys
         }
 
         def calculateDesiredPrimal(costArray: list):
             # first sort the Array
-            sorted_arr = np.sort(costArray, axis = 0)
+            sorted_arr = costArray[costArray[:, 0].argsort()]
             sumSoFar = 0.0 # sum so far
             derivativeSoFar = 0.0 # derivative of the previous segment
-            
+            newDerivative = 0.0 # initialize in case of triviality
+
             i = 0
             while i < len(sorted_arr) - 1:
                 curX = sorted_arr[i][0]
                 nextX = sorted_arr[i+1][0]
 
-                newDerivative = derivativeSoFar + sorted_arr[i][1]  # probability associated with left / epsilon
-                newSum = sumSoFar + newDerivative * (nextX - curX)
+                newDerivative = derivativeSoFar + sorted_arr[i][1]  # probability associated with primal key
+                nextSum = sumSoFar + newDerivative * (nextX - curX)
 
-                if newSum > epsilon:
+                if nextSum > epsilon:
                     break
 
-                sumSoFar = newSum
+                sumSoFar = nextSum
                 derivativeSoFar = newDerivative
-
                 i += 1
 
+            if i == len(sorted_arr) - 1:
+                #  need to update in case of edge conditions
+                curX = sorted_arr[i][0] 
+                newDerivative += sorted_arr[i][1]
+
             x = (epsilon - sumSoFar) / newDerivative + curX
-            return x
+            return x, i
         
         dualPotentialMapping: Callable[[Any], float] = {}
+        innerIterations = 0
         for dualKey in dualKeys:
-            dualPotentialMapping[dualKey] = calculateDesiredPrimal(negativePotentialMinusCostMappings[dualKey])
+            newValue, newIters = calculateDesiredPrimal(negativePotentialMinusCostMappings[dualKey])
+            dualPotentialMapping[dualKey] = newValue
+            innerIterations += newIters
 
-        return dualPotentialMapping, 0.0
+        return dualPotentialMapping, innerIterations
             
 
 

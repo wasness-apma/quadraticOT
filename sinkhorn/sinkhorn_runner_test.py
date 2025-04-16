@@ -132,10 +132,44 @@ def test_coin_flip_quadratic_runner():
         require((pi.get_probability(("T1", "H2")) - (1 - eta / 2)) < delta)
 
 
+def test_compare_quadratic_kernels():
+    for nkeys in range(1, 10):
+        # scaling
+        dist_a_keys_unsummed = {i: 1.0 * (i+1) for i in range(nkeys)}
+        sum_a = sum([v for v in dist_a_keys_unsummed.values()])
+        dist_a_keys = {key: (dist_a_keys_unsummed[key])/sum_a for key in dist_a_keys_unsummed}
+        dist_a = FiniteDistribution(dist_a_keys)
+
+        # uniform
+        dist_b_keys_unsummed = {i: 1.0 for i in range(nkeys)}
+        sum_b = sum([v for v in dist_b_keys_unsummed.values()])
+        dist_b_keys = {key: dist_b_keys_unsummed[key]/sum_b for key in dist_b_keys_unsummed}
+        dist_b = FiniteDistribution(dist_b_keys)
+
+        cost = lambda x, y: (x - y)**2
+
+        runner_standard = skern.get_pnorm_regularized_runner(2.0, cost)
+        runner_optimized = skern.get_quadratically_regularized_runner(cost)
+
+        epsilon = 1.0
+        precisionDelta = 0.01
+        pi_s, f_s, g_s, _, _ = runner_standard.run_sinkhorn(dist_a, dist_b, epsilon, precisionDelta=precisionDelta)
+        pi_q, f_q, g_q, _, _ = runner_optimized.run_sinkhorn(dist_a, dist_b, epsilon, precisionDelta=precisionDelta)
+
+        require(pi_s.get_keys() == pi_q.get_keys())
+        require(f_s.keys() == f_q.keys())
+        require(g_s.keys() == g_q.keys())
+
+        for (x, y) in pi_s.get_keys():
+            requireApproxEq(pi_s.get_probability((x, y)), pi_q.get_probability((x, y)), epsilon=precisionDelta)
+            requireApproxEq(f_s[x], f_q[x], epsilon=precisionDelta)
+            requireApproxEq(g_s[y], g_q[y], epsilon=precisionDelta)
+
 def run_all_tests():
     test_singleton()
     test_coin_flip_2norm()
     test_coin_flip_quadratic_runner()
+    test_compare_quadratic_kernels()
     print("Ran all Tests for SinkhornRunnerTest")
 
 if __name__ == "__main__":
