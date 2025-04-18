@@ -3,3 +3,9 @@ Note that black_composite_img_p_epsilon_0.01.png Took
 Delta = 0.01
 Outer Iterations = 661
 Inner Iterations = 5813461440
+
+
+black_composite_img_p_epsilon_0.001.png Took
+Delta = 0.05
+Outer Iterations = 425
+Inner Iterations = 3740494801
