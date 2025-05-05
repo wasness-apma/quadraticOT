@@ -3,7 +3,7 @@ Quadratic OT Simulations
 
 Install local package via
 
-pip3 install -3 .
+pip3 install -e .
 
 To navigate this repo:
 
