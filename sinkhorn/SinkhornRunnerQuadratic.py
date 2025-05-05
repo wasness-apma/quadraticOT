@@ -7,8 +7,9 @@ from concurrent.futures import ProcessPoolExecutor
 from functools import partial
 
 
-# A generic module for running sinkhorn algorithms and outputting duals on finite spaces. 
-# c is the cost function on X \times Y, Phi is the Regularizer, Psi is Phi^*, PsiPrime is the Derivative of Psi
+# A runner made for quadratically regularized optimal transport.
+# c is the cost function on X \times Y.
+# Parallelization is optional.
 class SinkhornRunnerQuadratic(SinkhornRunner):
     def __init__(self, cost: Callable[[Any, Any], float], use_parallelization: bool):
         self.cost = cost
@@ -65,7 +66,6 @@ class SinkhornRunnerQuadratic(SinkhornRunner):
 
             total_search_iterations += additional_iterations_g + additional_iterations_f
 
-            # pimapping = {(key1, key2): self.PsiPrime((f[key1] + g[key2] - self.cost(key1, key2)) / epsilon) * rho1.get_probability(key1) * rho2.get_probability(key2) for key1 in rho1.get_keys() for key2 in rho2.get_keys()}
             pimapping = rho1Vector.reshape(-1, 1) * np.maximum(f.reshape(-1, 1) - self.C + g, 0) * rho2Vector / epsilon
             rho1_marginals = np.sum(pimapping, axis = 1)
             rho2_marginals = np.sum(pimapping, axis = 0)
@@ -79,8 +79,6 @@ class SinkhornRunnerQuadratic(SinkhornRunner):
                     print(f"outer iterations: {outer_iterations}. inner iterations: {total_search_iterations}. Error: {rho1_error + rho2_error}")
             if rho1_error + rho2_error < precisionDelta or (max_iterations is not None and outer_iterations >= max_iterations):
                 break
-            # else:
-                # print(f"Rho1 Error: {rho1_error}, Rho2 Error: {rho2_error}. f: {f}, g: {g}, PiMapping: {pimapping}")
 
         piMapping_remapped = {(self.rho1Keys[i], self.rho2Keys[j]): pimapping[i, j] for i in range(rho1Size) for j in range(rho2Size)}
         f_remappped = {self.rho1Keys[i]: f[i] for i in range(rho1Size)}
@@ -96,6 +94,16 @@ class SinkhornRunnerQuadratic(SinkhornRunner):
 
         return (returnDistribution, f_remappped, g_remappped, total_search_iterations, outer_iterations)
 
+
+    ####
+    #
+    # This function calculates the solution to 
+    #
+    #   \sum_{j = 1}^m (x - costArray_j)_+ = epsilon
+    #
+    # By traversing the sorted costArray to find the largest j so that x >= costArray_j. Then it linearly interpolates. 
+    # 
+    ###
     @staticmethod
     def calculateDesiredPrimal(costArray: np.array, probabilityArray: np.array, epsilon: float):
         # first sort the Array

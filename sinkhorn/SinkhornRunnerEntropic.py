@@ -7,8 +7,8 @@ from concurrent.futures import ProcessPoolExecutor
 from functools import partial
 
 
-# A generic module for running sinkhorn algorithms and outputting duals on finite spaces. 
-# c is the cost function on X \times Y, Phi is the Regularizer, Psi is Phi^*, PsiPrime is the Derivative of Psi
+# A runner made for quadratically regularized optimal transport.
+# c is the cost function on X \times Y.
 class SinkhornRunnerEntropic(SinkhornRunner):
     def __init__(self, cost: Callable[[Any, Any], float]):
         self.cost = cost
